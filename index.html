@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>我们 · 一起走过的日子</title>
+<meta name="description" content="我们的照片相册">
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💛</text></svg>">
+</head>
+<body>
+
+<!-- ============ 入场（同时用于解锁音乐） ============ -->
+<div class="gate" id="gate">
+  <div class="gate-inner">
+    <div class="gate-ring" aria-hidden="true">
+      <span class="gate-heart">♥</span>
+    </div>
+    <p class="gate-kicker" id="gateKicker">FOR YOU</p>
+    <h2 class="gate-names" id="gateNames">— &amp; —</h2>
+    <p class="gate-line">这里有一些我们的日子</p>
+    <button class="gate-btn" id="gateBtn" type="button">
+      <span class="gate-btn-txt">轻触进入</span>
+      <span class="gate-btn-note">♪ 会播放背景音乐《茉茉》</span>
+    </button>
+    <p class="gate-credit">音乐：茉茉 · Nzwin 黄跃成</p>
+  </div>
+</div>
+
+<audio id="bgm" src="music/bgm.mp3" loop preload="auto" playsinline></audio>
+
+<!-- 音乐开关 / 放映开关 -->
+<button class="music-btn" id="musicBtn" type="button" aria-label="背景音乐与放映" aria-pressed="false">
+  <span class="music-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+  <span class="music-label" id="musicLabel">放映</span>
+</button>
+
+<!-- ============ 全屏放映 ============ -->
+<div class="show" id="show" hidden aria-hidden="true">
+  <div class="show-stage" id="showStage">
+    <div class="show-slide" id="showA"></div>
+    <div class="show-slide" id="showB"></div>
+  </div>
+
+  <div class="show-top">
+    <span class="show-count" id="showCount"></span>
+    <div class="show-progress"><i id="showBar"></i></div>
+  </div>
+
+  <div class="show-cap" id="showCap">
+    <span class="show-title" id="showTitle"></span>
+    <span class="show-meta" id="showMeta"></span>
+  </div>
+
+  <button class="show-btn show-exit" id="showExit" type="button" aria-label="退出放映">✕</button>
+  <button class="show-btn show-toggle" id="showToggle" type="button" aria-label="暂停">❚❚</button>
+
+  <p class="show-hint" id="showHint">点击画面暂停 · 按 Esc 退出</p>
+</div>
+
+<!-- ============ 顶部 ============ -->
+<header class="site-header" id="top">
+  <a class="brand" href="#top">
+    <span class="brand-names" id="brandNames">— &amp; —</span>
+    <span class="brand-sub">OUR DAYS</span>
+  </a>
+  <nav class="nav">
+    <a href="#" id="navShow">放映</a>
+    <a href="#gallery">相册</a>
+    <a href="#about">关于</a>
+  </nav>
+</header>
+
+<!-- ============ 首屏 ============ -->
+<section class="hero">
+  <div class="hero-inner">
+    <p class="hero-kicker" id="heroKicker">A LITTLE ARCHIVE OF US</p>
+    <h1 class="hero-title" id="heroTitle">我们</h1>
+    <p class="hero-note" id="heroNote">每一次快门，都是证据。</p>
+
+    <div class="counter" aria-live="polite">
+      <span class="counter-num" id="daysNum">0</span>
+      <span class="counter-label">天，一起走过</span>
+    </div>
+
+    <a class="scroll-hint" href="#gallery" aria-label="往下看">
+      <span>往下翻</span>
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <path d="M12 4v14M6 13l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.4"
+              stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+  </div>
+</section>
+
+<!-- ============ 筛选 ============ -->
+<div class="filters" id="filters" role="tablist" aria-label="按标签筛选"></div>
+
+<!-- ============ 相册 ============ -->
+<main id="gallery" class="gallery-wrap">
+  <div id="gallerySections"></div>
+  <div class="empty" id="emptyState" hidden>
+    <div class="empty-mark" aria-hidden="true">♡</div>
+    <p class="empty-title">相册还空着</p>
+    <p class="empty-hint">
+      把照片放进 <code>photos/</code> 文件夹，再运行一次清单生成器，<br>
+      它们就会按时间排好，出现在这里。
+    </p>
+    <p class="empty-cmd"><code>python tools/make_manifest.py</code></p>
+  </div>
+</main>
+
+<!-- ============ 关于 ============ -->
+<section class="about" id="about">
+  <h2 class="section-label">关于这本相册</h2>
+  <p class="about-text" id="aboutText">
+    这里存着我们随手拍下的日常。没有精修，没有滤镜，只有当时的光和当时的人。
+  </p>
+</section>
+
+<footer class="site-footer">
+  <p><span id="footerNames">我们</span> · 从 <span id="footerDate">—</span> 起</p>
+  <p class="footer-small">Made with care</p>
+</footer>
+
+<!-- ============ 灯箱 ============ -->
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="照片查看" hidden>
+  <button class="lb-btn lb-close" id="lbClose" aria-label="关闭">✕</button>
+  <button class="lb-btn lb-prev" id="lbPrev" aria-label="上一张">‹</button>
+  <button class="lb-btn lb-next" id="lbNext" aria-label="下一张">›</button>
+  <figure class="lb-figure">
+    <img id="lbImg" alt="">
+    <figcaption class="lb-cap">
+      <span class="lb-title" id="lbTitle"></span>
+      <span class="lb-meta"><span id="lbDate"></span> · <span id="lbIndex"></span></span>
+    </figcaption>
+  </figure>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/photos.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
