@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>相册后台 · 在线编辑</title>
+<link rel="stylesheet" href="css/editor.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚙</text></svg>">
+</head>
+<body>
+
+<header class="bar">
+  <div class="bar-left">
+    <span class="dot"></span>
+    <strong>相册后台</strong>
+    <span class="hint" id="repoHint">未连接</span>
+  </div>
+  <div class="bar-right">
+    <a class="link" href="index.html" target="_blank" rel="noopener">看网站</a>
+    <span id="status" class="status">未连接</span>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <!-- 连接 -->
+  <section class="card" id="connectCard">
+    <h2 class="card-title">连接 GitHub <span class="badge">只存在你的浏览器里</span></h2>
+    <p class="tip-line">
+      需要一个 <b>Fine-grained token</b>：GitHub → Settings → Developer settings →
+      Fine-grained tokens → 只勾选这个仓库的 <b>Contents: Read and write</b>。<br>
+      令牌保存在本机 localStorage，除了 github.com 不会发给任何人。
+    </p>
+    <label class="field"><span>令牌</span>
+      <input id="token" type="password" placeholder="github_pat_... 或 ghp_..." autocomplete="off">
+    </label>
+    <div class="export-row">
+      <button id="connectBtn" class="primary">连接并读取线上内容</button>
+      <button id="forgetBtn" class="ghost">清除令牌</button>
+    </div>
+    <pre id="log" class="log" hidden></pre>
+  </section>
+
+  <!-- 编辑区（连接后才显示） -->
+  <div id="editorArea" hidden>
+
+    <section class="card">
+      <h2 class="card-title">文案</h2>
+      <div class="grid2">
+        <label class="field"><span>他的名字</span><input id="hisName" type="text"></label>
+        <label class="field"><span>她的名字</span><input id="herName" type="text"></label>
+        <label class="field"><span>在一起的日期</span><input id="startDate" type="date"></label>
+        <label class="field"><span>首屏小标题（英文）</span><input id="heroKicker" type="text"></label>
+      </div>
+      <label class="field"><span>首屏大标题</span><input id="heroTitle" type="text"></label>
+      <label class="field"><span>首屏一句话</span><textarea id="heroNote" rows="2"></textarea></label>
+      <label class="field"><span>关于这段</span><textarea id="aboutText" rows="3"></textarea></label>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">放映设置</h2>
+      <div class="grid2">
+        <label class="field"><span>播放顺序</span>
+          <select id="showOrder">
+            <option value="asc">按时间：早 → 晚</option>
+            <option value="desc">按时间：晚 → 早</option>
+            <option value="random">随机</option>
+          </select>
+        </label>
+        <label class="field"><span>每张停留</span>
+          <select id="showDuration">
+            <option value="3">3 秒</option>
+            <option value="5">5 秒</option>
+            <option value="8">8 秒</option>
+            <option value="12">12 秒</option>
+          </select>
+        </label>
+      </div>
+      <div class="grid2">
+        <label class="field"><span>转场方式</span>
+          <select id="showMotion">
+            <option value="kenburns">缓慢推近 + 淡入淡出</option>
+            <option value="fade">只淡入淡出</option>
+            <option value="cut">直接切换</option>
+          </select>
+        </label>
+        <label class="field"><span>打开网站后</span>
+          <select id="showAuto">
+            <option value="1">自动开始放映</option>
+            <option value="0">先看相册</option>
+          </select>
+        </label>
+      </div>
+      <label class="field"><span>音乐音量：<b id="volVal">50%</b></span>
+        <input id="showVolume" type="range" min="0" max="100" step="5" value="50">
+      </label>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">照片 <span class="badge" id="countBadge">0</span>
+        <span class="badge ghost" id="newBadge">新增 0</span></h2>
+
+      <div id="dropzone" class="dropzone">
+        <div class="dz-icon">＋</div>
+        <p class="dz-main">拖照片进来，或 <button type="button" id="pickBtn" class="linklike">选择文件</button></p>
+        <p class="dz-sub">会自动压到最长边 1200px 再提交</p>
+        <input id="fileInput" type="file" accept="image/*" multiple hidden>
+      </div>
+
+      <ul id="photoList" class="photo-list"></ul>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">保存</h2>
+      <p class="tip-line">保存 = 直接往仓库提交一次 commit，GitHub Pages 约 1 分钟后自动更新。</p>
+      <div class="export-row">
+        <button id="saveBtn" class="primary">保存并发布</button>
+        <button id="reloadBtn" class="ghost">放弃修改，重新读取</button>
+      </div>
+      <pre id="log2" class="log" hidden></pre>
+    </section>
+  </div>
+</main>
+
+<script src="js/admin.js"></script>
+</body>
+</html>
