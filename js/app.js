@@ -311,12 +311,17 @@
   const hintEl = document.getElementById("showHint");
 
   const MUTE_KEY = "us-music-muted";
-  const DUR = 5000;          // 每张停留
-  const TARGET = 0.5;        // 音乐目标音量
   const reduceMotion = window.matchMedia &&
     window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const CFG = (typeof CONFIG !== "undefined") ? CONFIG : {};
+  const SET = (CFG.show && typeof CFG.show === "object") ? CFG.show : {};
+
+  const DUR = Math.min(30000, Math.max(1500, (Number(SET.duration) || 5) * 1000));
+  const TARGET = Math.min(1, Math.max(0, typeof SET.volume === "number" ? SET.volume : 0.5));
+  const ORDER = SET.order || "asc";
+  const MOTION = SET.motion || "kenburns";
+  const AUTO_START = SET.autoStart !== false;
   const names = (CFG.hisName || "我") + " & " + (CFG.herName || "你");
   const gateNames = document.getElementById("gateNames");
   if (gateNames) gateNames.textContent = names;
@@ -379,6 +384,7 @@
   let back = null;
   let wakeLock = null;
   let hintTimer = null;
+  let autoPaused = false;     // 因切后台/息屏被自动暂停
 
   function formatDate(iso, time) {
     if (!iso) return "";
@@ -387,13 +393,19 @@
   }
 
   function buildSlides() {
-    const src = (window.__GALLERY_PHOTOS || []).filter((p) => !p.removed);
-    // 按时间正序，讲成一个故事
-    slides = src.slice().sort((a, b) => {
-      const ka = (a.date || "") + (a.time || "");
-      const kb = (b.date || "") + (b.time || "");
-      return ka < kb ? -1 : ka > kb ? 1 : 0;
-    });
+    // show === false 的照片不进放映
+    const src = (window.__GALLERY_PHOTOS || []).filter((p) => !p.removed && p.show !== false);
+
+    const key = (p) => (p.date || "") + " " + (p.time || "");
+    slides = src.slice().sort((a, b) => (key(a) < key(b) ? -1 : key(a) > key(b) ? 1 : 0));
+
+    if (ORDER === "desc") slides.reverse();
+    else if (ORDER === "random") {
+      for (let i = slides.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [slides[i], slides[j]] = [slides[j], slides[i]];
+      }
+    }
   }
 
   function preload(i) {
@@ -414,7 +426,7 @@
 
     back.classList.add("is-on");
     front.classList.remove("is-on", "is-zoom");
-    if (!reduceMotion) {
+    if (!reduceMotion && MOTION === "kenburns") {
       setTimeout(() => back.classList.add("is-zoom"), 60);
     }
 
@@ -534,6 +546,8 @@
     paused = false;
     showEl.hidden = false;
     showEl.setAttribute("aria-hidden", "false");
+    showEl.classList.toggle("is-cut", MOTION === "cut");
+    showEl.classList.toggle("is-fade", MOTION === "fade");
     void showEl.offsetWidth;          // 强制重排，保证从 opacity:0 开始过渡
     showEl.classList.add("is-open");  // 不依赖 rAF（被节流会导致整层透明）
 
@@ -634,12 +648,29 @@
     if (!document.fullscreenElement && showing) releaseScreen();
   });
 
+  // 播放到结尾（2:00）兜底：不让它安静下来
+  bgm.addEventListener("ended", () => {
+    if (!bgm.paused) return;
+    bgm.currentTime = 0;
+    if (showing || localStorage.getItem(MUTE_KEY) === "0") playMusic();
+  });
+
+  // 被系统打断（来电、别的 App 抢音频）后，回到前台自动续
+  bgm.addEventListener("pause", () => {
+    if (!showing || paused || document.hidden) return;
+    setTimeout(() => {
+      if (showing && !paused && bgm.paused && !document.hidden) playMusic();
+    }, 400);
+  });
+
   // ---------- 入场 ----------
   function enter(withMusic) {
     gate.classList.add("is-hidden");
     document.body.style.overflow = "";
     setTimeout(() => { gate.style.display = "none"; }, 900);
-    if (withMusic) startShow();   // 音乐一起，自动全屏放映
+    if (!withMusic) return;
+    if (AUTO_START) startShow();  // 音乐一起，自动全屏放映
+    else playMusic();             // 只看相册，音乐照放
   }
 
   const muted = localStorage.getItem(MUTE_KEY) === "1";
@@ -657,11 +688,17 @@
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) {
-      if (showing && !paused) pauseShow();
-      else if (!bgm.paused) { bgm.pause(); paintBtn(); bgm.dataset.resume = "1"; }
-    } else if (bgm.dataset.resume === "1" && !showing) {
-      delete bgm.dataset.resume;
-      playMusic();
+      // 切走：暂停，并记住是"被动暂停"，回来要自动续上
+      if (showing && !paused) { pauseShow(); autoPaused = true; }
+      else if (!bgm.paused) { bgm.pause(); paintBtn(); autoPaused = true; }
+    } else {
+      // 回来：重新申请屏幕常亮
+      lockScreen();
+      if (autoPaused) {
+        autoPaused = false;
+        if (showing && paused) resumeShow();
+        else if (!showing && bgm.paused) playMusic();
+      }
     }
   });
 
