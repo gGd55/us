@@ -167,6 +167,7 @@
     state.photos = PHOTOS.map((p) => ({
       file: p.file, title: p.title || "", date: p.date || "",
       time: p.time || "", include: p.show !== false,
+      thumb: p.thumb || "", view: p.view || "", w: p.w || 0, h: p.h || 0,
       isNew: false, removed: false,
     }));
 
@@ -318,6 +319,9 @@ const CONFIG = {
         const o = { file: p.file, title: p.title || "", date: p.date || "" };
         if (p.time) o.time = p.time;
         if (p.thumb) o.thumb = p.thumb;
+        if (p.view) o.view = p.view;
+        if (p.w) o.w = p.w;
+        if (p.h) o.h = p.h;
         if (p.include === false) o.show = false;
         return o;
       })
