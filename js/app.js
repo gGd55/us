@@ -134,6 +134,7 @@
             (p.thumb && p.view ? ' srcset="' + p.thumb + " 640w, " + p.view + " 1200w" +
               '" sizes="(max-width: 720px) 46vw, 24vw"' : "") +
             ' alt="' + (p.title || "我们的照片") + '" loading="lazy" decoding="async"' +
+            (p.w && p.h ? ' width="' + p.w + '" height="' + p.h + '"' : "") +
             ' data-full="' + p.file + '">' +
         "</div>" +
         '<figcaption class="card-cap">' +
