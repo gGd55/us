@@ -236,19 +236,35 @@
              time: `${pad(d.getHours())}:${pad(d.getMinutes())}` };
   }
 
-  function compress(file, maxSide = 1200, q = 0.82) {
+  function drawScaled(img, maxSide) {
+    let { width: w, height: h } = img;
+    const s = Math.min(1, maxSide / Math.max(w, h));
+    if (s < 1) { w = Math.round(w * s); h = Math.round(h * s); }
+    const cv = document.createElement("canvas");
+    cv.width = w; cv.height = h;
+    cv.getContext("2d").drawImage(img, 0, 0, w, h);
+    return cv;
+  }
+
+  function toBlob(canvas, type, q) {
+    return new Promise((res) => canvas.toBlob((b) => res(b), type, q));
+  }
+
+  // 返回 { full: 1200px JPEG, thumb: 640px WebP, w, h }
+  function compress(file) {
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
-      img.onload = () => {
+      img.onload = async () => {
         URL.revokeObjectURL(url);
-        let { width: w, height: h } = img;
-        const s = Math.min(1, maxSide / Math.max(w, h));
-        if (s < 1) { w = Math.round(w * s); h = Math.round(h * s); }
-        const cv = document.createElement("canvas");
-        cv.width = w; cv.height = h;
-        cv.getContext("2d").drawImage(img, 0, 0, w, h);
-        cv.toBlob((b) => (b ? resolve(b) : reject(new Error("编码失败"))), "image/jpeg", q);
+        try {
+          const big = drawScaled(img, 1200);
+          const small = drawScaled(img, 640);
+          const full = await toBlob(big, "image/jpeg", 0.82);
+          const thumb = await toBlob(small, "image/webp", 0.72);
+          if (!full) throw new Error("JPEG 编码失败");
+          resolve({ full, thumb: thumb || null, w: img.naturalWidth, h: img.naturalHeight });
+        } catch (e) { reject(e); }
       };
       img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("不是有效图片")); };
       img.src = url;
@@ -259,12 +275,15 @@
     const arr = Array.from(files).filter((f) => /^image\//.test(f.type));
     for (const f of arr) {
       try {
-        const blob = await compress(f);
+        const out = await compress(f);
         const { date, time } = parseDate(f.name, f.lastModified);
         const stamp = date.replace(/-/g, "-") + "_" + (time || "00:00").replace(":", "") + "00";
+        const name = `${stamp}-${Date.now().toString(36).slice(-4)}`;
         state.photos.unshift({
-          file: `photos/${stamp}-${Date.now().toString(36).slice(-4)}.jpg`,
-          title: "", date, time, include: true, isNew: true, blob, removed: false,
+          file: `photos/${name}.jpg`,
+          thumb: out.thumb ? `photos/thumbs/${name}.webp` : "",
+          title: "", date, time, include: true, isNew: true,
+          blob: out.full, thumbBlob: out.thumb, removed: false,
         });
         state.dirty = true;
       } catch (e) {
@@ -298,6 +317,7 @@ const CONFIG = {
       .map((p) => {
         const o = { file: p.file, title: p.title || "", date: p.date || "" };
         if (p.time) o.time = p.time;
+        if (p.thumb) o.thumb = p.thumb;
         if (p.include === false) o.show = false;
         return o;
       })
@@ -322,8 +342,14 @@ const CONFIG = {
         for (const p of newOnes) {
           const buf = await p.blob.arrayBuffer();
           await putFile(p.file, b64buf(buf), "后台：新增照片 " + p.file.split("/").pop());
+          if (p.thumbBlob && p.thumb) {
+            const tb = await p.thumbBlob.arrayBuffer();
+            await putFile(p.thumb, b64buf(tb), "后台：新增缩略图 " + p.thumb.split("/").pop());
+            log("   ✓ " + p.file.split("/").pop() + "（含缩略图）", box);
+          } else {
+            log("   ✓ " + p.file.split("/").pop(), box);
+          }
           p.isNew = false;
-          log("   ✓ " + p.file, box);
         }
       }
 
