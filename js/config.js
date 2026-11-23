@@ -9,7 +9,7 @@ const CONFIG = {
   aboutText: "这里存着侯光银和高荣婷随手拍下的日常——路过的海、吃过的面、笑到模糊的瞬间。把它们放在一起，才发现普通的日子原来这么好看。",
   show: {
     "order": "asc",
-    "duration": 5,
+    "duration": 3,
     "motion": "kenburns",
     "autoStart": true,
     "volume": 0.5
