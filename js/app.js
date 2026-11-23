@@ -130,7 +130,11 @@
       '<figure class="card" data-idx="' + idx + '" tabindex="0" role="button" ' +
       'aria-label="查看：' + (p.title || "照片") + '">' +
         '<div class="card-frame">' +
-          '<img src="' + p.file + '" alt="' + (p.title || "我们的照片") + '" loading="lazy" decoding="async">' +
+          '<img src="' + (p.thumb || p.file) + '"' +
+            (p.thumb && p.view ? ' srcset="' + p.thumb + " 640w, " + p.view + " 1200w" +
+              '" sizes="(max-width: 720px) 46vw, 24vw"' : "") +
+            ' alt="' + (p.title || "我们的照片") + '" loading="lazy" decoding="async"' +
+            ' data-full="' + p.file + '">' +
         "</div>" +
         '<figcaption class="card-cap">' +
           '<span class="t">' + (p.title || "&nbsp;") + "</span>" +
@@ -214,7 +218,7 @@
   function paintLightbox() {
     const p = visible[cur];
     if (!p) return;
-    lbImg.src = p.file;
+    lbImg.src = p.view || p.file;
     lbImg.alt = p.title || "我们的照片";
     lbTitle.textContent = p.title || "";
     lbDate.textContent = formatDate(p.date, p.time);
@@ -412,7 +416,7 @@
     const p = slides[i];
     if (!p) return;
     const im = new Image();
-    im.src = p.file;
+    im.src = p.view || p.file;
   }
 
   function paintSlide() {
@@ -420,7 +424,7 @@
     if (!p || !front) return;
 
     // 双缓冲：back 先设好图，再交替 z-index
-    back.style.backgroundImage = 'url("' + p.file + '")';
+    back.style.backgroundImage = 'url("' + (p.view || p.file) + '")';
     back.style.zIndex = 2;
     front.style.zIndex = 1;
 
