@@ -1,4 +1,4 @@
-/* ===========================================================
+﻿/* ===========================================================
    相册后台：用 GitHub 当后端
    读：直接拉取仓库里的 js/config.js 与 js/photos.js
    写：逐文件提交（Contents API），自动带上已有 sha
@@ -34,6 +34,7 @@
 
   async function api(path, opts) {
     const res = await fetch(API + path, Object.assign({
+      cache: "no-store",
       headers: {
         Authorization: "Bearer " + getToken(),
         Accept: "application/vnd.github+json",
@@ -52,21 +53,33 @@
     return res.json();
   }
 
-  async function readFile(path) {
-    const res = await api(`/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`,
-      { headers: { Authorization: "Bearer " + getToken(),
-                   Accept: "application/vnd.github.raw" } });
-    const text = await res.text();
-    return text;
+  function b64dec(b64) {
+    const clean = String(b64).replace(/\s/g, "");
+    const bin = atob(clean);
+    const bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+
+  const shaCache = new Map();
+
+  // 一次请求拿到「内容 + sha」，避免 raw / json 两种 Accept 命中同一缓存
+  async function readFileWithSha(path) {
+    const res = await api(`/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`);
+    const j = await res.json();
+    if (Array.isArray(j)) throw new Error(path + " 是目录，不是文件");
+    shaCache.set(path, j.sha || null);
+    return b64dec(j.content || "");
   }
 
   async function fileSha(path) {
+    if (shaCache.has(path)) return shaCache.get(path);
     try {
-      const res = await api(`/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}`);
+      const res = await api(`/repos/${OWNER}/${REPO}/contents/${path}?ref=${BRANCH}&t=${Date.now()}`);
       const j = await res.json();
+      shaCache.set(path, j.sha || null);
       return j.sha || null;
     } catch (e) {
-      if (String(e.message).indexOf("404") > -1) return null;
+      if (String(e.message).indexOf("404") > -1) { shaCache.set(path, null); return null; }
       throw e;
     }
   }
@@ -75,13 +88,17 @@
     const sha = await fileSha(path);
     const body = { message, content: base64, branch: BRANCH };
     if (sha) body.sha = sha;
-    await api(`/repos/${OWNER}/${REPO}/contents/${path}`, {
+    const resp = await api(`/repos/${OWNER}/${REPO}/contents/${path}`, {
       method: "PUT",
       headers: { Authorization: "Bearer " + getToken(),
                  Accept: "application/vnd.github+json",
                  "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
+    try {
+      const j = await resp.json();
+      if (j && j.content && j.content.sha) shaCache.set(path, j.content.sha);
+    } catch (e) {}
   }
 
   // ---------------- 状态 ----------------
@@ -112,8 +129,8 @@
   // ---------------- 读取 ----------------
   async function load() {
     say("读取中…");
-    const cfgText = await readFile("js/config.js");
-    const phText = await readFile("js/photos.js");
+    const cfgText = await readFileWithSha("js/config.js");
+    const phText = await readFileWithSha("js/photos.js");
 
     const CONFIG = new Function(cfgText + "; return CONFIG;")();
     const PHOTOS = new Function(phText + "; return PHOTOS;")();
